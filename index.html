@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spanish II Masterclass Quiz</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        /* Extra CSS rule to physically block selection across browsers */
+        .no-select {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+    </style>
+</head>
+<body class="bg-purple-50">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useCallback } = React;
+
+        // --- ICONS ---
+        const AlertTriangle = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>;
+        const CheckCircle = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>;
+        const Play = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>;
+        const RefreshCw = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>;
+        const ChevronLeft = ({ className }) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"></path></svg>;
+
+        // --- 20 QUESTION BANK (Present Indicative) ---
+        const QUESTIONS = [
+            // Drag & Drop
+            { type: 'drag_drop', prompt: "I am a student.", correct: ["yo", "soy", "un", "estudiante"], distractors: ["eres", "estoy", "es"] },
+            { type: 'drag_drop', prompt: "She is tired.", correct: ["ella", "está", "cansada"], distractors: ["es", "están", "estoy"] },
+            { type: 'drag_drop', prompt: "We are cold.", correct: ["nosotros", "tenemos", "frío"], distractors: ["somos", "estamos", "tienen"] },
+            { type: 'drag_drop', prompt: "He wants an apple.", correct: ["él", "quiere", "una", "manzana"], distractors: ["quiero", "queremos", "quieren"] },
+            { type: 'drag_drop', prompt: "I go to the school.", correct: ["yo", "voy", "a", "la", "escuela"], distractors: ["va", "vas", "fui"] },
+            
+            // True / False
+            { type: 'true_false', prompt: "Does 'hay dos gatos' mean 'There are two cats'?", correctAnswer: true },
+            { type: 'true_false', prompt: "Does 'yo hago la tarea' mean 'I make the bed'?", correctAnswer: false },
+            { type: 'true_false', prompt: "Does 'nos gustan los perros' mean 'We like the dogs'?", correctAnswer: true },
+            { type: 'true_false', prompt: "Does 'él tiene que estudiar' mean 'He wants to study'?", correctAnswer: false },
+            { type: 'true_false', prompt: "Does 'tú eres alto' mean 'You are tall'?", correctAnswer: true },
+            
+            // Dropdown
+            { type: 'dropdown', prompt: "Ella ___ (does) la tarea.", options: ["hace", "hago", "hacen", "haces"], correctAnswer: "hace" },
+            { type: 'dropdown', prompt: "Nosotros ___ (go) al cine.", options: ["van", "vamos", "voy", "vas"], correctAnswer: "vamos" },
+            { type: 'dropdown', prompt: "Yo ___ (want) dormir.", options: ["quiero", "quiere", "queremos", "quieren"], correctAnswer: "quiero" },
+            { type: 'dropdown', prompt: "Tú ___ (are) en el parque.", options: ["eres", "estás", "está", "estoy"], correctAnswer: "estás" },
+            { type: 'dropdown', prompt: "A mí me ___ (likes) el libro.", options: ["gustan", "gusta", "gusto", "gustamos"], correctAnswer: "gusta" },
+            
+            // Matching & Double Matching
+            { type: 'double_dropdown_matching', prompt: "Match the English to the correct Spanish (SER/ESTAR):", rows: [{left: "I am (characteristic)", right1: "yo", right2: "soy"}, {left: "She is (emotion/location)", right1: "ella", right2: "está"}, {left: "They are (characteristic)", right1: "ellos", right2: "son"}, {left: "We are (emotion/location)", right1: "nosotros", right2: "estamos"}] },
+            { type: 'double_dropdown_matching', prompt: "Match the English meaning to the correct conjugation of TENER:", rows: [{left: "I have", right1: "yo", right2: "tengo"}, {left: "You (informal) have", right1: "tú", right2: "tienes"}, {left: "We have", right1: "nosotros", right2: "tenemos"}, {left: "They have", right1: "ellos", right2: "tienen"}] },
+            { type: 'double_dropdown_matching', prompt: "Match the English meaning to the correct conjugation of IR:", rows: [{left: "I go", right1: "yo", right2: "voy"}, {left: "He goes", right1: "él", right2: "va"}, {left: "We go", right1: "nosotros", right2: "vamos"}, {left: "You all go", right1: "ustedes", right2: "van"}] },
+            { type: 'double_dropdown_matching', prompt: "Match the English meaning to the correct conjugation of HACER:", rows: [{left: "I do / make", right1: "yo", right2: "hago"}, {left: "You (informal) do / make", right1: "tú", right2: "haces"}, {left: "We do / make", right1: "nosotros", right2: "hacemos"}, {left: "They (fem.) do / make", right1: "ellas", right2: "hacen"}] },
+            { type: 'matching', prompt: "Match the Spanish phrase to its translation:", pairs: [{left: "me gusta", right: "I like"}, {left: "quiero", right: "I want"}, {left: "hay", right: "There is/are"}, {left: "queremos", right: "We want"}] }
+        ];
+
+        const PERIODS = ["1st", "A2", "A4", "B3", "B4", "5th"];
+
+        const shuffleArray = (array) => {
+            const newArr = [...array];
+            for (let i = newArr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
+            }
+            return newArr;
+        };
+
+        function App() {
+            const [studentInfo, setStudentInfo] = useState({ firstName: '', lastName: '', email: '', period: '' });
+            const [loginError, setLoginError] = useState('');
+            const [quizStarted, setQuizStarted] = useState(false);
+            const [quizFinished, setQuizFinished] = useState(false);
+            
+            // Randomized questions specific to this student's run
+            const [shuffledQuestions, setShuffledQuestions] = useState([]);
+            
+            const [currentQIndex, setCurrentQIndex] = useState(0);
+            const [score, setScore] = useState(0);
+            const [cheatCount, setCheatCount] = useState(0);
+            const [showCheatAlert, setShowCheatAlert] = useState(false);
+            
+            const [userStates, setUserStates] = useState([]); 
+            
+            const [currentAnswer, setCurrentAnswer] = useState(null);
+            const [draggedItem, setDraggedItem] = useState(null);
+            const [dragSource, setDragSource] = useState(null); 
+            
+            const [questionResults, setQuestionResults] = useState([]);
+            
+            const [submitting, setSubmitting] = useState(false);
+            const [submitStatus, setSubmitStatus] = useState('');
+
+            const loadQuestion = useCallback(() => {
+                if (shuffledQuestions.length === 0) return;
+                
+                const q = shuffledQuestions[currentQIndex];
+                const savedState = userStates[currentQIndex];
+
+                if (savedState !== null && savedState !== undefined) {
+                    setCurrentAnswer(savedState);
+                } else {
+                    if (q.type === 'drag_drop') {
+                        setCurrentAnswer({ available: q.initialAvailable, selected: [] });
+                    } else if (q.type === 'true_false') {
+                        setCurrentAnswer(null);
+                    } else if (q.type === 'dropdown') {
+                        setCurrentAnswer('');
+                    } else if (q.type === 'matching' || q.type === 'double_dropdown_matching') {
+                        setCurrentAnswer({});
+                    }
+                }
+            }, [currentQIndex, userStates, shuffledQuestions]);
+
+            useEffect(() => {
+                if (quizStarted && !quizFinished) {
+                    loadQuestion();
+                }
+            }, [quizStarted, currentQIndex, quizFinished, loadQuestion]);
+
+            useEffect(() => {
+                const handleVisibilityChange = () => {
+                    if (document.hidden && quizStarted && !quizFinished) {
+                        setCheatCount(prev => prev + 1);
+                        setShowCheatAlert(true);
+                    }
+                };
+                
+                const handleWindowBlur = () => {
+                    if (quizStarted && !quizFinished) {
+                        setCheatCount(prev => prev + 1);
+                        setShowCheatAlert(true);
+                    }
+                };
+
+                document.addEventListener("visibilitychange", handleVisibilityChange);
+                window.addEventListener("blur", handleWindowBlur);
+
+                return () => {
+                    document.removeEventListener("visibilitychange", handleVisibilityChange);
+                    window.removeEventListener("blur", handleWindowBlur);
+                };
+            }, [quizStarted, quizFinished]);
+
+            const handleItemClick = (item, source) => {
+                const currentQ = shuffledQuestions[currentQIndex];
+                if (currentQ?.type !== 'drag_drop') return;
+                
+                if (source === 'available') {
+                    setCurrentAnswer(prev => ({
+                        available: prev?.available?.filter(w => w.id !== item.id) || [],
+                        selected: [...(prev?.selected || []), item]
+                    }));
+                } else {
+                    setCurrentAnswer(prev => ({
+                        selected: prev?.selected?.filter(w => w.id !== item.id) || [],
+                        available: [...(prev?.available || []), item]
+                    }));
+                }
+            };
+
+            const handleDragStart = (e, item, source) => {
+                setDraggedItem(item);
+                setDragSource(source);
+                if(e.dataTransfer) {
+                    e.dataTransfer.setData('text/plain', item.id);
+                    e.dataTransfer.effectAllowed = 'move';
+                }
+            };
+
+            const handleDragOver = (e) => {
+                e.preventDefault();
+                if(e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+            };
+
+            const handleDrop = (e, targetZone) => {
+                e.preventDefault();
+                if (!draggedItem || dragSource === targetZone) {
+                    setDraggedItem(null);
+                    setDragSource(null);
+                    return;
+                }
+                const currentQ = shuffledQuestions[currentQIndex];
+                if (currentQ?.type === 'drag_drop') {
+                    handleItemClick(draggedItem, dragSource);
+                }
+                setDraggedItem(null);
+                setDragSource(null);
+            };
+
+            const handleBack = useCallback(() => {
+                if (currentQIndex > 0) {
+                    const newStates = [...userStates];
+                    newStates[currentQIndex] = currentAnswer;
+                    setUserStates(newStates);
+                    setCurrentQIndex(prev => prev - 1);
+                }
+            }, [currentQIndex, currentAnswer, userStates]);
+
+            const handleNext = useCallback(() => {
+                const newStates = [...userStates];
+                newStates[currentQIndex] = currentAnswer;
+                setUserStates(newStates);
+
+                if (currentQIndex < shuffledQuestions.length - 1) {
+                    setCurrentQIndex(prev => prev + 1);
+                } else {
+                    let finalScore = 0;
+                    let finalResults = [];
+                    
+                    newStates.forEach((state, idx) => {
+                        const q = shuffledQuestions[idx];
+                        let isRight = false;
+                        
+                        if (q.type === 'drag_drop') {
+                            const ansWords = state ? (state.selected || []) : []; 
+                            const userSentence = ansWords.map(w => w.word).join(' ').toLowerCase();
+                            const correctSentence = q.correct.join(' ').toLowerCase();
+                            isRight = userSentence === correctSentence;
+                        } else if (q.type === 'true_false' || q.type === 'dropdown') {
+                            isRight = state === q.correctAnswer;
+                        } else if (q.type === 'matching') {
+                            if (state && Object.keys(state).length === q.pairs.length) {
+                                isRight = q.pairs.every(p => state[p.left] === p.right);
+                            }
+                        } else if (q.type === 'double_dropdown_matching') {
+                            if (state && Object.keys(state).length === q.rows.length) {
+                                isRight = q.rows.every(row => 
+                                    state[row.left] && 
+                                    state[row.left].part1 === row.right1 && 
+                                    state[row.left].part2 === row.right2
+                                );
+                            }
+                        }
+                        
+                        if (isRight) finalScore++;
+                        finalResults.push(`${idx + 1}${isRight ? 'r' : 'w'}`);
+                    });
+
+                    const percentageScore = Math.round((finalScore / shuffledQuestions.length) * 100);
+
+                    setScore(percentageScore);
+                    setQuestionResults(finalResults);
+                    finishQuiz(finalResults, percentageScore, shuffledQuestions.length);
+                }
+            }, [currentQIndex, currentAnswer, userStates, shuffledQuestions]);
+
+            const finishQuiz = async (finalResults, percentageScore, totalQs) => {
+                setQuizFinished(true);
+                setSubmitting(true);
+                
+                // Save to localStorage to prevent retakes
+                const emailKey = studentInfo.email.trim().toLowerCase();
+                const pastTakers = JSON.parse(localStorage.getItem('hacerQuizTakers') || '[]');
+                if (!pastTakers.includes(emailKey)) {
+                    pastTakers.push(emailKey);
+                    localStorage.setItem('hacerQuizTakers', JSON.stringify(pastTakers));
+                }
+
+                // 1) Download CSV for student (NO right/wrong details)
+                const headers = ["Quiz Title", "Date", "First Name", "Last Name", "Email", "Period", "Score", "Total Questions", "Cheating Alerts"];
+                const row = [
+                    "SP2 TEST VERBOS",
+                    new Date().toLocaleDateString(),
+                    studentInfo.firstName,
+                    studentInfo.lastName,
+                    studentInfo.email,
+                    studentInfo.period,
+                    percentageScore,
+                    totalQs,
+                    cheatCount
+                ];
+                const csvContent = headers.join(",") + "\n" + row.map(item => `"${item}"`).join(",");
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.setAttribute("href", url);
+                link.setAttribute("download", `Spanish_Quiz_Results_${studentInfo.lastName}_${studentInfo.firstName}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                // 2) Payload for Google Sheets (INCLUDES right/wrong details)
+                const payload = {
+                    quizTitle: "SP2 TEST VERBOS",
+                    // Prepends the title directly to the timestamp so it goes into the existing first cell
+                    timestamp: "SP2 TEST VERBOS - " + new Date().toLocaleString(),
+                    firstName: studentInfo.firstName,
+                    lastName: studentInfo.lastName,
+                    email: studentInfo.email,
+                    period: studentInfo.period,
+                    score: percentageScore,
+                    totalQuestions: totalQs,
+                    cheatingAlertCount: cheatCount,
+                    resultsDetail: finalResults.join(', ') // "1w, 2r, 3r..."
+                };
+
+                try {
+                    // Make sure to replace this URL with your actual Google Apps Script Web App URL
+                    const GOOGLE_SHEETS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzF2cyJXzduz4pt8ZsXX8QT4jXYWFrkd9i_vIJUjSpTJf9qsB1A9BX8pl5Cl7zvl2LL/exec";
+                    
+                    if (GOOGLE_SHEETS_WEB_APP_URL !== "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE") {
+                        await fetch(GOOGLE_SHEETS_WEB_APP_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        setSubmitStatus('Results successfully saved to Gradebook!');
+                    } else {
+                        setSubmitStatus('Done! (Note: Google Sheet URL not configured).');
+                    }
+                } catch (error) {
+                    console.error("Submission error", error);
+                    setSubmitStatus('Error submitting results. Please show this screen to your teacher.');
+                } finally {
+                    setSubmitting(false);
+                }
+            };
+
+            const currentQ = shuffledQuestions[currentQIndex];
+
+            // Safely check if the current answer state is complete enough to enable the "Next" button
+            const isAnswerIncomplete = () => {
+                if (!currentQ) return true;
+                if (currentAnswer === null || currentAnswer === undefined) return true;
+                
+                if (currentQ.type === 'drag_drop') {
+                    return !currentAnswer.selected || currentAnswer.selected.length === 0;
+                }
+                if (currentQ.type === 'matching') {
+                    return typeof currentAnswer !== 'object' || Object.keys(currentAnswer).length < currentQ.pairs.length;
+                }
+                if (currentQ.type === 'double_dropdown_matching') {
+                    if (typeof currentAnswer !== 'object' || Object.keys(currentAnswer).length < currentQ.rows.length) return true;
+                    return currentQ.rows.some(row => 
+                        !currentAnswer[row.left] || 
+                        !currentAnswer[row.left].part1 || 
+                        !currentAnswer[row.left].part2
+                    );
+                }
+                if (currentQ.type === 'dropdown') {
+                    return currentAnswer === '';
+                }
+                return false; // true_false boolean handles valid/invalid natively
+            };
+
+            // Keyboard navigation (Enter key)
+            useEffect(() => {
+                const handleKeyDown = (e) => {
+                    if (e.key === 'Enter' && quizStarted && !quizFinished && !showCheatAlert && !isAnswerIncomplete()) {
+                        handleNext();
+                    }
+                };
+                window.addEventListener('keydown', handleKeyDown);
+                return () => window.removeEventListener('keydown', handleKeyDown);
+            }, [handleNext, quizStarted, quizFinished, showCheatAlert, isAnswerIncomplete, currentAnswer, currentQ]);
+
+            const handleReset = () => {
+                setStudentInfo({ firstName: '', lastName: '', email: '', period: '' });
+                setLoginError('');
+                setQuizStarted(false);
+                setQuizFinished(false);
+                setCurrentQIndex(0);
+                setScore(0);
+                setCheatCount(0);
+                setShowCheatAlert(false);
+                setUserStates([]);
+                setShuffledQuestions([]);
+                setQuestionResults([]);
+                setSubmitStatus('');
+            };
+
+            // Prevent Copy/Paste/Right-click events globally
+            const preventCopyEvents = (e) => {
+                e.preventDefault();
+            };
+
+            if (!quizStarted) {
+                const handleStartQuiz = (e) => {
+                    e.preventDefault();
+                    
+                    const emailKey = studentInfo.email.trim().toLowerCase();
+                    const pastTakers = JSON.parse(localStorage.getItem('hacerQuizTakers') || '[]');
+                    
+                    if (pastTakers.includes(emailKey)) {
+                        setLoginError('This School Email / ID has already been used to complete the quiz.');
+                        return;
+                    }
+                    
+                    setLoginError('');
+                    
+                    // Shuffle all 20 questions, and generate a pre-shuffled word bank for each
+                    const newlyShuffled = shuffleArray([...QUESTIONS]).map(q => {
+                        if (q.type === 'drag_drop') {
+                            const combinedWords = [...q.correct, ...q.distractors].map((word, index) => ({
+                                id: `${word}-${index}-${Math.random()}`,
+                                word: word
+                            }));
+                            return {
+                                ...q,
+                                initialAvailable: shuffleArray(combinedWords)
+                            };
+                        } else if (q.type === 'matching') {
+                            const rights = q.pairs.map(p => p.right);
+                            return { ...q, shuffledRights: shuffleArray(rights) };
+                        } else if (q.type === 'double_dropdown_matching') {
+                            const rights1 = [...new Set(q.rows.map(r => r.right1))];
+                            const rights2 = [...new Set(q.rows.map(r => r.right2))];
+                            return { 
+                                ...q, 
+                                shuffledRights1: shuffleArray(rights1),
+                                shuffledRights2: shuffleArray(rights2)
+                            };
+                        }
+                        return q;
+                    });
+
+                    setShuffledQuestions(newlyShuffled);
+                    setUserStates(Array(newlyShuffled.length).fill(null));
+                    setQuizStarted(true);
+                };
+
+                return (
+                    <div className="min-h-screen bg-purple-50 flex items-center justify-center p-4 font-sans">
+                        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full border border-purple-100">
+                            <div className="flex justify-center mb-6">
+                                <div className="bg-purple-600 p-3 rounded-full text-white">
+                                    <RefreshCw className="w-8 h-8" />
+                                </div>
+                            </div>
+                            <h1 className="text-3xl font-bold text-center text-purple-900 mb-2">Spanish II Assessment</h1>
+                            <p className="text-center text-purple-600 mb-8 font-medium">Present Indicative Verbs</p>
+                            
+                            <form onSubmit={handleStartQuiz} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-semibold text-purple-800 mb-1">First Name</label>
+                                    <input required type="text" className="w-full px-4 py-2 rounded-lg border border-purple-200 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                                        value={studentInfo.firstName} onChange={e => setStudentInfo({...studentInfo, firstName: e.target.value})} />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-purple-800 mb-1">Last Name</label>
+                                    <input required type="text" className="w-full px-4 py-2 rounded-lg border border-purple-200 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                                        value={studentInfo.lastName} onChange={e => setStudentInfo({...studentInfo, lastName: e.target.value})} />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-purple-800 mb-1">School Email / ID</label>
+                                    {/* type="text" allows alphanumeric input intentionally */}
+                                    <input required type="text" className="w-full px-4 py-2 rounded-lg border border-purple-200 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                                        value={studentInfo.email} onChange={e => setStudentInfo({...studentInfo, email: e.target.value})} />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-purple-800 mb-1">Class Period</label>
+                                    <select required className="w-full px-4 py-2 rounded-lg border border-purple-200 focus:ring-2 focus:ring-purple-500 focus:outline-none bg-white"
+                                        value={studentInfo.period} onChange={e => setStudentInfo({...studentInfo, period: e.target.value})}>
+                                        <option value="" disabled>Select your period...</option>
+                                        {PERIODS.map(p => <option key={p} value={p}>{p}</option>)}
+                                    </select>
+                                </div>
+                                
+                                <div className="pt-4 border-t border-purple-100 mt-6">
+                                    {loginError && (
+                                        <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-semibold mb-4 text-center border border-red-200">
+                                            {loginError}
+                                        </div>
+                                    )}
+                                   <div className="flex items-start bg-purple-50 p-3 rounded-lg mb-4">
+                                        <AlertTriangle className="w-5 h-5 text-purple-600 mr-2 flex-shrink-0 mt-0.5" />
+                                        <p className="text-xs text-purple-800 leading-tight">
+                                            <strong>Academic Integrity Notice:</strong> Leaving this tab or minimizing the window will trigger a cheating alert and notify your teacher. Copying text is disabled.
+                                        </p>
+                                   </div>
+                                    <button type="submit" className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-xl transition-colors flex items-center justify-center">
+                                        <Play className="w-5 h-5 mr-2" /> Start Assessment
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (quizFinished) {
+                return (
+                    <div className="min-h-screen bg-purple-50 flex flex-col items-center py-12 px-4 font-sans">
+                        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-lg w-full text-center border border-purple-100">
+                            <div className="mx-auto bg-purple-100 w-24 h-24 rounded-full flex items-center justify-center mb-6">
+                                <CheckCircle className="w-12 h-12 text-purple-600" />
+                            </div>
+                            <h1 className="text-3xl font-bold text-purple-900 mb-2">Quiz Complete!</h1>
+                            <p className="text-purple-600 mb-8">Excellent effort, {studentInfo.firstName}.</p>
+                            
+                            <div className="grid grid-cols-2 gap-4 mb-8">
+                                <div className="bg-purple-50 p-4 rounded-xl border border-purple-100">
+                                    <p className="text-sm text-purple-500 font-semibold mb-1">Final Score</p>
+                                    <p className="text-4xl font-black text-purple-700">{score}<span className="text-2xl text-purple-400">%</span></p>
+                                </div>
+                                <div className={`p-4 rounded-xl border ${cheatCount > 0 ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
+                                    <p className={`text-sm font-semibold mb-1 ${cheatCount > 0 ? 'text-red-500' : 'text-green-600'}`}>Tab Violations</p>
+                                    <p className={`text-4xl font-black ${cheatCount > 0 ? 'text-red-600' : 'text-green-700'}`}>{cheatCount}</p>
+                                </div>
+                            </div>
+
+                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+                               <p className="text-sm font-mono text-gray-700 break-words mb-2">
+                                    Status: {submitting ? "Sending to gradebook..." : submitStatus}
+                               </p>
+                               <p className="text-sm text-purple-600 font-semibold border-t border-gray-200 pt-2 mt-2">
+                                    ✓ A copy of your results (.csv) has been automatically downloaded for your records.
+                               </p>
+                            </div>
+
+                            <button 
+                                onClick={handleReset}
+                                className="w-full bg-purple-100 hover:bg-purple-200 text-purple-800 font-bold py-3 px-4 rounded-xl transition-colors flex items-center justify-center border border-purple-300"
+                            >
+                                <RefreshCw className="w-5 h-5 mr-2" /> Return to Beginning
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            // Safe fallback if questions haven't initialized properly yet
+            if (!currentQ) {
+                return <div className="min-h-screen bg-purple-50 flex items-center justify-center"><p>Loading questions...</p></div>;
+            }
+
+            // Helper to determine the header based on question type
+            const getQuestionHeader = (type) => {
+                if (type === 'drag_drop') return "Translate to Spanish";
+                if (type === 'true_false') return "True or False?";
+                if (type === 'dropdown') return "Fill in the Blank";
+                if (type === 'matching' || type === 'double_dropdown_matching') return "Match the Options";
+                return "Answer the Question";
+            };
+
+            const disableNextButton = isAnswerIncomplete();
+
+            // Primary quiz renderer with anti-copy listeners bound to the parent div
+            return (
+                <div 
+                    className="min-h-screen bg-purple-50 flex flex-col items-center py-8 px-4 font-sans no-select relative"
+                    onContextMenu={preventCopyEvents}
+                    onCopy={preventCopyEvents}
+                    onCut={preventCopyEvents}
+                    onPaste={preventCopyEvents}
+                >
+                    
+                    {showCheatAlert && (
+                        <div className="fixed inset-0 bg-red-900 bg-opacity-95 z-50 flex items-center justify-center p-6 flex-col">
+                             <AlertTriangle className="w-24 h-24 text-red-400 mb-6 animate-pulse" />
+                             <h2 className="text-4xl font-black text-white mb-4 text-center">Tab Switched!</h2>
+                             <p className="text-red-200 text-xl text-center max-w-md mb-8">
+                                 You left the assessment tab. This action has been recorded and your teacher will be notified.
+                             </p>
+                             <button 
+                                 onClick={() => setShowCheatAlert(false)}
+                                 className="bg-white text-red-900 font-bold py-3 px-8 rounded-full hover:bg-red-100 transition-colors"
+                             >
+                                 I Understand, Return to Quiz
+                             </button>
+                        </div>
+                    )}
+
+                    <div className="max-w-3xl w-full flex justify-between items-center mb-6">
+                         <div className="text-purple-800 font-bold">
+                                {studentInfo.firstName} {studentInfo.lastName} <span className="text-purple-500 font-normal">| Per {studentInfo.period}</span>
+                         </div>
+                    </div>
+
+                    <div className="bg-white rounded-2xl shadow-xl p-6 md:p-10 max-w-3xl w-full border border-purple-100 flex-grow flex flex-col">
+                        
+                        <div className="mb-8">
+                            <div className="flex justify-between text-sm font-semibold text-purple-500 mb-2">
+                                 <span>Question {currentQIndex + 1} of {shuffledQuestions.length}</span>
+                                 <span>{Math.round((currentQIndex / shuffledQuestions.length) * 100)}%</span>
+                            </div>
+                            <div className="w-full bg-purple-100 rounded-full h-2.5">
+                                <div className="bg-purple-600 h-2.5 rounded-full transition-all duration-300" style={{ width: `${((currentQIndex) / shuffledQuestions.length) * 100}%` }}></div>
+                            </div>
+                        </div>
+
+                        <div className="text-center mb-8">
+                            <h2 className="text-sm font-bold text-purple-400 uppercase tracking-widest mb-2">{getQuestionHeader(currentQ.type)}</h2>
+                            
+                            {currentQ.type !== 'dropdown' && (
+                                <p className="text-3xl font-black text-purple-900 pointer-events-none">"{currentQ.prompt}"</p>
+                            )}
+                            
+                            {currentQ.type === 'drag_drop' && (
+                                <p className="text-xs text-purple-400 mt-2 font-medium">Standard order required: Subject + Verb + Complement</p>
+                            )}
+                        </div>
+
+                        {currentQ.type === 'drag_drop' && (
+                            <div className="mb-6 flex-grow flex flex-col">
+                                <p className="text-sm font-bold text-purple-600 mb-2">Your Answer:</p>
+                                <div 
+                                    className={`min-h-[80px] p-4 rounded-xl border-2 border-dashed flex flex-wrap gap-2 items-start content-start transition-colors
+                                        ${dragSource === 'available' ? 'border-purple-400 bg-purple-50' : 'border-purple-200 bg-gray-50'}
+                                    `}
+                                    onDragOver={handleDragOver}
+                                    onDrop={(e) => handleDrop(e, 'selected')}
+                                >
+                                    {(!currentAnswer?.selected || currentAnswer.selected.length === 0) && (
+                                        <span className="text-gray-400 italic text-sm m-2 pointer-events-none">Tap or drop words here...</span>
+                                    )}
+                                    
+                                    {currentAnswer?.selected?.map((item) => (
+                                        <div 
+                                            key={item.id}
+                                            draggable
+                                            onDragStart={(e) => handleDragStart(e, item, 'selected')}
+                                            onClick={() => handleItemClick(item, 'selected')}
+                                            className="px-4 py-2 rounded-lg font-bold shadow-sm transition-transform cursor-pointer bg-purple-600 text-white hover:bg-purple-700 hover:-translate-y-0.5"
+                                        >
+                                            {item.word}
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="mt-8 mb-8">
+                                    <p className="text-sm font-bold text-purple-600 mb-2">Word Bank (Includes Extras):</p>
+                                    <div 
+                                        className={`min-h-[100px] p-4 rounded-xl border border-purple-100 bg-white flex flex-wrap gap-3 items-start content-start shadow-inner transition-colors
+                                            ${dragSource === 'selected' ? 'bg-purple-50 border-purple-300 border-dashed border-2' : ''}
+                                        `}
+                                        onDragOver={handleDragOver}
+                                        onDrop={(e) => handleDrop(e, 'available')}
+                                    >
+                                        {currentAnswer?.available?.map((item) => (
+                                            <div 
+                                                key={item.id}
+                                                draggable
+                                                onDragStart={(e) => handleDragStart(e, item, 'available')}
+                                                onClick={() => handleItemClick(item, 'available')}
+                                                className="px-4 py-2 bg-white border-2 border-purple-200 text-purple-700 rounded-lg font-bold shadow-sm hover:border-purple-400 hover:text-purple-900 cursor-pointer transition-all hover:-translate-y-0.5 active:translate-y-0"
+                                            >
+                                                {item.word}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {currentQ.type === 'true_false' && (
+                            <div className="flex-grow flex flex-col justify-center items-center mb-8">
+                                <div className="flex justify-center gap-6 w-full max-w-sm">
+                                    <button
+                                        className={`flex-1 py-5 rounded-xl font-bold text-2xl border-2 transition-all ${currentAnswer === true ? 'bg-purple-600 text-white border-purple-700 shadow-md scale-105' : 'bg-white text-purple-600 border-purple-200 hover:bg-purple-50'}`}
+                                        onClick={() => setCurrentAnswer(true)}
+                                    >
+                                        True
+                                    </button>
+                                    <button
+                                        className={`flex-1 py-5 rounded-xl font-bold text-2xl border-2 transition-all ${currentAnswer === false ? 'bg-purple-600 text-white border-purple-700 shadow-md scale-105' : 'bg-white text-purple-600 border-purple-200 hover:bg-purple-50'}`}
+                                        onClick={() => setCurrentAnswer(false)}
+                                    >
+                                        False
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {currentQ.type === 'dropdown' && (
+                            <div className="flex-grow flex flex-col items-center justify-center mb-8 text-center">
+                                <div className="text-2xl md:text-3xl font-bold text-purple-900 flex flex-wrap justify-center items-center gap-2 pointer-events-auto">
+                                    <span>{currentQ.prompt.split("___")[0]}</span>
+                                    <select
+                                        className="mx-2 p-2 text-xl md:text-2xl font-bold text-purple-700 bg-purple-50 border-b-4 border-purple-400 focus:outline-none focus:border-purple-600 rounded-t-md cursor-pointer transition-colors"
+                                        value={currentAnswer || ''}
+                                        onChange={(e) => setCurrentAnswer(e.target.value)}
+                                    >
+                                        <option value="" disabled>???</option>
+                                        {currentQ.options.map((opt, idx) => (
+                                            <option key={idx} value={opt}>{opt}</option>
+                                        ))}
+                                    </select>
+                                    <span>{currentQ.prompt.split("___")[1]}</span>
+                                </div>
+                            </div>
+                        )}
+
+                        {currentQ.type === 'matching' && (
+                            <div className="flex-grow flex flex-col justify-center mb-8 w-full max-w-2xl mx-auto space-y-4">
+                                {currentQ.pairs.map((pair, idx) => (
+                                    <div key={idx} className="flex justify-between items-center bg-purple-50 p-4 rounded-xl border border-purple-100 hover:border-purple-300 transition-colors pointer-events-auto">
+                                        <span className="font-bold text-purple-900 w-1/2 pr-4 text-base md:text-lg">{pair.left}</span>
+                                        <select
+                                            className="w-1/2 p-3 rounded-lg border border-purple-300 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500 font-semibold text-purple-800 cursor-pointer shadow-sm"
+                                            value={(currentAnswer && currentAnswer[pair.left]) || ''}
+                                            onChange={(e) => {
+                                                setCurrentAnswer(prev => ({ ...prev, [pair.left]: e.target.value }));
+                                            }}
+                                        >
+                                            <option value="" disabled>Select match...</option>
+                                            {currentQ.shuffledRights.map((rightOption, optIdx) => (
+                                                <option key={optIdx} value={rightOption}>{rightOption}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {currentQ.type === 'double_dropdown_matching' && (
+                            <div className="flex-grow flex flex-col justify-center mb-8 w-full max-w-3xl mx-auto space-y-4">
+                                {currentQ.rows.map((row, idx) => (
+                                    <div key={idx} className="flex flex-col md:flex-row justify-between items-center bg-purple-50 p-4 rounded-xl border border-purple-100 hover:border-purple-300 transition-colors pointer-events-auto gap-3">
+                                        <span className="font-bold text-purple-900 w-full md:w-2/5 text-center md:text-left text-base md:text-lg">{row.left}</span>
+                                        <div className="flex w-full md:w-3/5 gap-2">
+                                            <select
+                                                className="w-1/2 p-3 rounded-lg border border-purple-300 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500 font-semibold text-purple-800 cursor-pointer shadow-sm"
+                                                value={(currentAnswer && currentAnswer[row.left] && currentAnswer[row.left].part1) || ''}
+                                                onChange={(e) => {
+                                                    setCurrentAnswer(prev => ({ 
+                                                        ...prev, 
+                                                        [row.left]: { ...(prev[row.left] || {}), part1: e.target.value } 
+                                                    }));
+                                                }}
+                                            >
+                                                <option value="" disabled>Subject...</option>
+                                                {currentQ.shuffledRights1.map((opt, optIdx) => (
+                                                    <option key={optIdx} value={opt}>{opt}</option>
+                                                ))}
+                                            </select>
+                                            <select
+                                                className="w-1/2 p-3 rounded-lg border border-purple-300 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500 font-semibold text-purple-800 cursor-pointer shadow-sm"
+                                                value={(currentAnswer && currentAnswer[row.left] && currentAnswer[row.left].part2) || ''}
+                                                onChange={(e) => {
+                                                    setCurrentAnswer(prev => ({ 
+                                                        ...prev, 
+                                                        [row.left]: { ...(prev[row.left] || {}), part2: e.target.value } 
+                                                    }));
+                                                }}
+                                            >
+                                                <option value="" disabled>Verb...</option>
+                                                {currentQ.shuffledRights2.map((opt, optIdx) => (
+                                                    <option key={optIdx} value={opt}>{opt}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <div className="mt-auto pt-4 flex justify-between items-center border-t border-purple-100">
+                            <button 
+                                onClick={handleBack}
+                                disabled={currentQIndex === 0}
+                                className={`flex items-center px-4 py-2 rounded-lg font-bold transition-colors ${currentQIndex === 0 ? 'text-purple-300 cursor-not-allowed' : 'text-purple-600 hover:bg-purple-100'}`}
+                            >
+                                <ChevronLeft className="w-5 h-5 mr-1" /> Back
+                            </button>
+                            
+                            <button 
+                                onClick={handleNext}
+                                disabled={disableNextButton}
+                                className={`px-8 py-3 rounded-xl font-bold text-white transition-all shadow-md
+                                    ${disableNextButton 
+                                        ? 'bg-purple-300 cursor-not-allowed' 
+                                        : 'bg-purple-600 hover:bg-purple-700 hover:-translate-y-0.5'}`}
+                            >
+                                {currentQIndex === shuffledQuestions.length - 1 ? 'Submit Assessment' : 'Next Question'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
